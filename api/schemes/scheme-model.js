@@ -69,7 +69,7 @@ async function findById(scheme_id) { // EXERCISE B
   }
     
   const schemeObj = {
-    scheme_id,
+    scheme_id: Number(scheme_id),
     scheme_name: steps[0].scheme_name,
     steps: stepsArray
   }
