@@ -70,7 +70,7 @@ async function findById(scheme_id) { // EXERCISE B
     
   const schemeObj = {
     scheme_id: Number(scheme_id),
-    scheme_name: steps[0].scheme_name,
+    scheme_name: steps.length > 0 ? steps[0].scheme_name : steps.scheme_name,
     steps: stepsArray
   }
   return schemeObj;
@@ -194,16 +194,21 @@ async function addStep(scheme_id, step) { // EXERCISE E
     and resolves to _all the steps_ belonging to the given `scheme_id`,
     including the newly created one.
   */
+  
+  // finds all current steps
   let currentSchemeSteps = await findSteps(scheme_id)
+  // declares highest num var
   let highestStepNum = 0;
+  // finds highest step num among steps
   currentSchemeSteps.map((step) => {
     if (step.step_number > highestStepNum) {
       highestStepNum = step.step_number
     }
-    })
-  let stepId = await db('steps').insert({ ...step, scheme_id, step_number: highestStepNum + 1 });
+  })
+  // inserts step with correct scheme_id and step_num
+  await db('steps').insert({ ...step, scheme_id, step_number: highestStepNum + 1 });
+  // returns all steps
   return await findSteps(scheme_id)
-  // return await db('steps').where('steps.scheme_id', scheme_id, )
 }
 
 module.exports = {
@@ -211,5 +216,5 @@ module.exports = {
   findById,
   findSteps,
   add,
-  addStep,
+  addStep
 }
