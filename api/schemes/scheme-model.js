@@ -1,4 +1,13 @@
-function find() { // EXERCISE A
+const knex = require('knex');
+
+const db = knex({
+  client: 'sqlite3',
+  connection: {
+    filename: './data/schemes.db3'
+  },
+  useNullAsDefault: true
+})
+async function find() { // EXERCISE A
   /*
     1A- Study the SQL query below running it in SQLite Studio against `data/schemes.db3`.
     What happens if we change from a LEFT join to an INNER join?
@@ -14,10 +23,57 @@ function find() { // EXERCISE A
 
     2A- When you have a grasp on the query go ahead and build it in Knex.
     Return from this function the resulting dataset.
-  */
+  */const res = await db('schemes')
+    .innerJoin('steps', 'schemes.scheme_id', 'steps.scheme_id')
+    .select('schemes.*')
+    .count('steps.step_id as number_of_steps')
+    .groupBy('schemes.scheme_id')
+    .orderBy('schemes.scheme_id', 'asc');
+  return res
+  
 }
 
-function findById(scheme_id) { // EXERCISE B
+// findById
+//      {
+//         "scheme_id": 1,
+//         "scheme_name": "World Domination",
+//         "steps": [
+//           {
+//             "step_id": 2,
+//             "step_number": 1,
+//             "instructions": "solve prime number theory"
+//           },
+//           {
+//             "step_id": 1,
+//             "step_number": 2,
+//             "instructions": "crack cyber security"
+//           },
+//           // etc
+//         ]
+//       }
+async function findById(scheme_id) { // EXERCISE B
+  const steps = await db('schemes')
+    .leftJoin('steps', 'schemes.scheme_id', 'steps.scheme_id')
+    .select('schemes.scheme_name', 'steps.*')
+    .where('schemes.scheme_id', scheme_id)
+    .orderBy('steps.step_number', 'asc');
+  let stepsArray = []
+  if (steps.length > 0 && steps[0].step_id !== null) {
+      stepsArray = steps.map((step, index) => {
+      return {
+        step_id: step.step_id,
+        step_number: index + 1,
+        instructions: step.instructions
+      }
+    });
+  }
+    
+  const schemeObj = {
+    scheme_id,
+    scheme_name: steps[0].scheme_name,
+    steps: stepsArray
+  }
+  return schemeObj;
   /*
     1B- Study the SQL query below running it in SQLite Studio against `data/schemes.db3`:
 
@@ -32,7 +88,7 @@ function findById(scheme_id) { // EXERCISE B
 
     2B- When you have a grasp on the query go ahead and build it in Knex
     making it parametric: instead of a literal `1` you should use `scheme_id`.
-
+    
     3B- Test in Postman and see that the resulting data does not look like a scheme,
     but more like an array of steps each including scheme information:
 
@@ -85,7 +141,23 @@ function findById(scheme_id) { // EXERCISE B
   */
 }
 
-function findSteps(scheme_id) { // EXERCISE C
+async function findSteps(scheme_id) { // EXERCISE C
+  const steps = await db('steps')
+    .leftJoin('schemes', 'schemes.scheme_id', 'steps.scheme_id')
+    .select('schemes.scheme_name', 'steps.*')
+    .where('steps.scheme_id', scheme_id)
+  .orderBy('step_number', 'asc')
+  if (steps.length > 0) {
+    let stepsArray = steps.map((step) => {
+      return {
+        step_id: step.step_id,
+        step_number: step.step_number,
+        instructions: step.instructions,
+        scheme_name: step.scheme_name
+      }
+    })
+    return stepsArray
+  } else return []
   /*
     1C- Build a query in Knex that returns the following data.
     The steps should be sorted by step_number, and the array
@@ -108,18 +180,30 @@ function findSteps(scheme_id) { // EXERCISE C
   */
 }
 
-function add(scheme) { // EXERCISE D
+async function add(scheme) { // EXERCISE D
   /*
     1D- This function creates a new scheme and resolves to _the newly created scheme_.
   */
+  const id = await db('schemes').insert(scheme)
+  return await findById(id)
 }
 
-function addStep(scheme_id, step) { // EXERCISE E
+async function addStep(scheme_id, step) { // EXERCISE E
   /*
     1E- This function adds a step to the scheme with the given `scheme_id`
     and resolves to _all the steps_ belonging to the given `scheme_id`,
     including the newly created one.
   */
+  let currentSchemeSteps = await findSteps(scheme_id)
+  let highestStepNum = 0;
+  currentSchemeSteps.map((step) => {
+    if (step.step_number > highestStepNum) {
+      highestStepNum = step.step_number
+    }
+    })
+  let stepId = await db('steps').insert({ ...step, scheme_id, step_number: highestStepNum + 1 });
+  return await findSteps(scheme_id)
+  // return await db('steps').where('steps.scheme_id', scheme_id, )
 }
 
 module.exports = {
